@@ -13,9 +13,7 @@ var config = {
 	refresh: 5000
 };
 
-// For dev purposes only
-AWS.config.update({ accessKeyId: 'AKIAILIVQGQEYI3QPFJA', secretAccessKey: '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' });
-
+// DON'T FORGET TO SET AWS_ACCESS_KEY and AWS_SECRET_ACCESS_KEY
 
 var camelot = new Camelot( {
   device:'/dev/video0',
