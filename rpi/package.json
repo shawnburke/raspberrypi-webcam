@@ -1,0 +1,19 @@
+
+{
+  "name": "raspberrypi-webcam",
+  "version": "0.0.0",
+  "description": "Regularly pulls images from a USB webcam and uploads to S3",
+  "main": "app.js",
+  "scripts": {
+  },
+  "repository": "https://github.com/shawnburke/raspberrypi-webcam",
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "~2.1.25",
+    "camelot" : "0.0.4",
+    "moment":"2.10.2",
+    "underscore" : "1.8.3"
+  }
+}
+
