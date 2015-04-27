@@ -54,12 +54,31 @@
 
 <script>
 
-// Access Key ID:
-// AKIAJZNNZRQMPAUBTO5A
-// Secret Access Key:
-// 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
+var publicReadKey = '[An aws key from a IAM account with readonly public access to the bucket]';
+var publicReadSecretKey = '[An aws secret key from a IAM account with readonly public access to the bucket]';
 
- AWS.config.update({accessKeyId: 'AKIAJZNNZRQMPAUBTO5A', secretAccessKey: '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'});
+// IAM: POLICY TEMPLATE
+//
+// 1. Create an IAM group with this policy
+// 2. Create a user, add to only this group
+// 3. User that users keys
+// {
+//     "Version": "2012-10-17",
+//     "Statement": [
+//         {
+//             "Effect": "Allow",
+//             "Action": [
+//                 "s3:Get*",
+//                 "s3:List*"
+//             ],
+//             "Resource": "arn:aws:s3:::BUCKET_NAME/*"
+//         }
+//     ]
+// }
+
+
+
+ AWS.config.update({accessKeyId: publicReadKey, secretAccessKey: publicReadSecretKey});
  
   var bucket = new AWS.S3({params: {Bucket: '341-webcam'}});
   var root = 'http://341-webcam.s3.amazonaws.com/';
