@@ -97,6 +97,9 @@ function configureBucket(callback) {
 		  callback(err);
 		});
 	}
+	else {
+		callback();
+	}
 }
 
 var interval = options.interval * 1000;
@@ -110,7 +113,6 @@ function getFile(callback) {
 			camelot.grab( {
 			  'font' : 'Arial:24',
 			  title: ""
-			  //'frequency' : 5   
 			}, cb);
 		},
 		function uploadFile(image, cb) {
@@ -131,7 +133,7 @@ function getFile(callback) {
 				ContentType: 'image/png',
 				ACL: 'public-read'
 			},function (err, resp) {
-				var refresh = refreshRate;
+				var refresh = interval;
 				if (err)  {
 					console.error("Error uploading to S3: " + err.message);
 					refresh *= 10;
@@ -142,7 +144,7 @@ function getFile(callback) {
 				}
 				// set our timer to call back through
 				//
-				_.delay(getFile, interval);
+				_.delay(getFile, refresh);
 			});
 		}
 	], function(err) {
