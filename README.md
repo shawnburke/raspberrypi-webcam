@@ -16,7 +16,7 @@ On S3 we'll have a bucket configured as a [http://docs.aws.amazon.com/AmazonS3/l
 
 ## Configuring S3
 
-To configure the S3 account, you'll want to set it as a public static website so web browsers (and AJAX calls) can access the files.  However, this does not allow listing the files.  Even though S3 will return the list of files from `listBucket`, I was unable to find a way to get the S3 SDK to make calls without credentials.  So rather than fighting that battle, the next easiest thing is to just create an IAM user with the ability to read the files in the bucket.
+To configure the S3 account, you'll want to set it as a public static website so web browsers (and AJAX calls) can access the files.  However, this does not allow listing the files.  Even though S3 will return the list of files from `listBucket`, I was unable to find a way to get the S3 SDK to make calls without credentials, or to just use the XML parser so I can call with AJAX and then parse the result to JSON (this is very doable).  So rather than fighting that battle, the next easiest thing is to just create an IAM user with the ability to read the files in the bucket.
 
 ### Configuring the bucket for static website access
 
@@ -26,6 +26,8 @@ To configure the S3 account, you'll want to set it as a public static website so
 4. Select "Enable Website Hosting" and enter `Index.html` as the index document name.
 
 ### Configuring the IAM user
+
+We want a user that can access the directory for pulling a list of the files, and we ONLY want this user to be able to do this.  These keys will be technically visible on the internet so we need to make sure they are properly configured.
 
 1. In the AWS portal, choose Services > IAM
 2. Choose Groups > "New Group"
@@ -52,9 +54,11 @@ To configure the S3 account, you'll want to set it as a public static website so
 
 You can now use the copied keys for public, readonly access.  These keys will be in the HTML file, but they don't offer any more abilities than the static website configuration already offers.
 
-## Setting up
+## Setting It All Up.
 
 ### Setting up the Raspberry Pi
+
+Here we'll set up the RPi using our read/write AWS keys so it can write files to the bucket.
 
 1. Install fswebcam (usually `sudo apt-get install fswebcam`)
 2. Clone this repo
@@ -65,8 +69,29 @@ You can now use the copied keys for public, readonly access.  These keys will be
 
 ### Setting up the web page
 
-1.  Open index.html and add your IAM keys (public read only!), your bucket name (should match above), and optionally the folder and refresh to the `sites` collection. 
-2. Drop web/index.html into the root of the bucket
+Create a json file called `config.json`, which will house the configuration for your project.  You will drop this file next do your Index.html.  These values are outside of the html file so we can check in the HTML wihout accidentally checking in keys, or for testing different configurations.
+
+#### Create your configuration file
+
+Here is a template for the file:
+
+
+		{
+			"title" : "My Webcam",
+			"AWS_ACCESS_KEY": "MY AWS KEY", // IAM KEY FROM ABOVE
+			"AWS_SECRET_ACCESS_KEY": "MY AWS SECRET KEY", // IAM SECRET KEY FROM ABOVE
+			"bucket": "MyS3Bucket",
+			"sites": [
+			  { 
+			    "name": "Garage",
+			    "folder":"images",
+			    "refresh": 5
+			  }
+			]
+		}
+
+1. Upload `web/index.html` and `web/config.json' into the root of your bucket.  Be sure to do Set Details > Set Permissions > "Make Everything Public" when you are uploading.
+2. Navigate to the page with your web browser as the root of the bucket: `http://mybucket.s3-website-us-west-2.amazonaws.com`.
 3. Profit!  (okay, not really.)
 
 

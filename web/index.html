@@ -4,14 +4,15 @@
 <html lang="en">
 <head>
 	<meta charset="utf-8" />
-	<title>341</title>
+	<title></title>
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<script src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
 	<script src='https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js'></script>
 	<script src="https://sdk.amazonaws.com/js/aws-sdk-2.1.24.min.js"></script>
   <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet"/>
-  <!--<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>-->
+  <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
   <script src='https://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.1.2/backbone-min.js'></script>
+
 	<style>
 	.thumb {
 	    max-height:80px;
@@ -24,35 +25,39 @@
 <!-- TEMPLATES -->
 
 <script type='text/html' id='site_template'>
-	<div class='row item-parent'>
-   
+  <div>
+   <div class='row item-parent'>
+     
+    </div>
   </div>
 </script>
 
 <script type='text/html' id='home_template'>
-  <div class='row item-parent'>
-   
+  <div>
+    <div class='home-content'></div>
   </div>
 </script>
 
 
 <script type='text/html' id='home_site_item_template'>
-    <div class='col-xs-12 col-md-3'>
+    <div class='col-xs-12 col-md-3 item'>
       <a href="#sites/<%= typeof Name !== 'undefined' ? Name : '' %>" class="thumbnail">
          <img src="<%=Url%>"/>
          <div class="caption">
           <h3><%=Name%></h3>
+          <p>(<%=FormattedAge%>)</p>
         </div>
       </a>
     </div>
 </script>
 
 <script type='text/html' id='site_item_template'>
-    <div class='col-xs-12 col-md-4'>
+    <div class='col-xs-12 col-md-4 item'>
       <a href="#" class="thumbnail">
          <img src="<%=Url%>"/>
          <div class="caption">
-           <p>LastModified: <%=LastModified%></p><p>(<%=FormattedAge%>)</p>
+           <p><%=LastModified.toLocaleDateString() %> <%=LastModified.toLocaleTimeString() %></p>
+           <p>(<%=FormattedAge%>)</p>
         </div>
       </a>
     </div>
@@ -62,21 +67,28 @@
   <li data-id='<%=name%>'><a href="#sites/<%=name%>"><%=name%></a></li>
 </script>
 
-<nav class="navbar navbar-default">
+
+
+<nav class="navbar navbar-inverse">
   <div class="container-fluid">
-    <!-- Brand and toggle get grouped for better mobile display -->
     <div class="navbar-header">
-     
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>                        
+      </button>
       <a class="navbar-brand" href="#">Rπ Webcam</a>
     </div>
-
-    <!-- Collect the nav links, forms, and other content for toggling -->
-    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-      <ul class="nav navbar-nav site-list">
-        </ul>
-    </div><!-- /.navbar-collapse -->
-  </div><!-- /.container-fluid -->
+    <div class="collapse navbar-collapse" id="myNavbar">
+      <ul class="nav navbar-nav">
+        <li class='home-nav'><a href="#">Home</a></li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right site-list">
+      </ul>
+    </div>
+  </div>
 </nav>
+
  <div class="container-fluid">
     <div class='row'>
       <div class='col-xs-12 content-root'>
@@ -88,35 +100,16 @@
 
 <script>
 
-(function init() {
+function init(config) {
 
 
-// IAM: POLICY TEMPLATE
-//
-// 1. Create an IAM group with this policy
-// 2. Create a user, add to only this group
-// 3. User that users keys
-// {
-//     "Version": "2012-10-17",
-//     "Statement": [
-//         {
-//             "Effect": "Allow",
-//             "Action": [
-//                 "s3:Get*",
-//                 "s3:List*"
-//             ],
-//             "Resource": "arn:aws:s3:::BUCKET_NAME/*"
-//         }
-//     ]
-// }
+config = config || {};
+var publicReadKey = config.AWS_ACCESS_KEY || '[aws key]';
+var publicReadSecretKey = config.AWS_SECRET_ACCESS_KEY || '[aws secret key]';
 
-var publicReadKey = '[aws key]';
-var publicReadSecretKey = '[aws secret key]';
+var bucket = config.bucket; // YOUR BUCKET NAME
 
-
-
-var bucket = null; // YOUR BUCKET NAME
-
+document.title = config.title || "RPi Webcam";
 
 if (!bucket)
  {
@@ -134,13 +127,7 @@ AWS.config.update({accessKeyId: publicReadKey, secretAccessKey: publicReadSecret
 // define the cameras you want to monitor here.  Each camera will put its images into a separate 
 // folder in S3.  These names should match the folder parameter passed the RPi function.
 
-var sites = [
-  { 
-    name: 'Garage',
-    folder:'images',
-    refresh: 5
-  }
-];
+var sites = config.sites;
 
 sites = _.map(sites, function(s){return new Backbone.Model(s)});
 
@@ -255,23 +242,49 @@ var SiteView = Backbone.View.extend({
       // make sure we don't keep refreshing if element is destroyed.
       return !this._dead && this.$el.is(":visible");
     },
-    destroy: function() {
+    dispose: function() {
       this._dead = true;
-      Backbone.View.prototype.apply(this, arguments);
     },
     render: function() {
+
+      if (this._dead) return this;
+
       var el = this.$el;
-      var html = this.template(this.model.toJSON());
-      el.html(html);
-      var parent = $('.item-parent', el);
+
+      // first render only
+      //
+      var  parent = $('.item-parent', el);
+      if (!this._rendered) {
+        var html = this.template(this.model.toJSON());
+        el.html(html);
+        this._rendered = true;
+        parent = $('.item-parent', el);
+      }
       
       var self = this;
+
+      // we want to update the items once the image is loaded so we don't get flashing.
+      //
+
+      // first, we mark all of the existing children as old so we know which ones to delete.
+      //
+      $('.item', parent).addClass('old-item');
 
       // iterate the images and just slap down the HTML
       this.imageModel.each(function(m){
         var json = m.toJSON();
         json.Name = self.model.get('name');
-        var itemHtml = self.site_item_template(json);
+        var itemHtml = $(self.site_item_template(json));
+        
+        // hook the load event - small bug here that everything will render on the first load.
+        //
+        $('img', itemHtml).load(function() {
+            // clear the old items and show the new items
+            $('.old-item', parent).remove();
+            $('.item', parent).show();
+            self.trigger('rendered');
+        });
+        itemHtml.hide();
         parent.append(itemHtml);
       })
       return this;
@@ -290,7 +303,13 @@ var HomeView = Backbone.View.extend({
       this._views = {};
       this._rendered = false;
     },
-   
+    dispose: function() {
+
+      _.each(this._views, function(v) {
+        v.dispose();
+      });
+      this._views = {};
+   },
     render: function() {
         if (this._rendered) return;
         this._rendered = true;
@@ -298,7 +317,7 @@ var HomeView = Backbone.View.extend({
         el.empty();
         var html = this._template({});
         el.html(html);
-        el = $('.item-parent', el);
+        var self = this;
         _.each(this._sites, function(site) {
 
           var siteView = new SiteView({
@@ -306,12 +325,12 @@ var HomeView = Backbone.View.extend({
             template: '#home_site_item_template',
             max: 1}
           );
-
+          self._views[site.get('name')] = siteView;
           siteView.render();
-          el.append(siteView.$el);
+          $('.home-content', el).append(siteView.$el);
+         
         });
 
-        
         return this;
     }
 })
@@ -324,18 +343,32 @@ var Router = Backbone.Router.extend({
     "":                  "home",    // #help
     "sites/:name":        "site",  // #search/foo
   },
-
+  setCurrentView: function(view) {
+    if (this._currentView) {
+        this._currentView.dispose();
+        this._currentView = null;
+    }
+    this._currentView = view;
+  },
   home: function() {
     // create the home view.
     //
+    $('.content-root').empty();
     var view = new HomeView({el:'.content-root', sites:sites});
+    $('nav li').removeClass('active');
+    $('.home-nav').addClass('active');
     view.render();
+    this.setCurrentView(view);
   },
   site: function(name) {
+    $('.content-root').empty();
+    
     var site = _.find(sites, function(s){return s.get('name') == name});
     if (site != null) {
         var view = new SiteView({el:'.content-root', model:site});
         view.render();
+        this.setCurrentView(view);
+        $('nav li').removeClass('active');
         $('li[data-id=' + name + ']').addClass('active');
     }
   }
@@ -351,10 +384,57 @@ _.each (sites, function(s) {
 
 Backbone.history.start()
 
-})();
+};
+
+// look for a config file in the same folder as index.html, structured as follows
+//
+//
+// {
+//   AWS_ACCESS_KEY: 'aws key',
+//   AWS_SECRET_ACCESS_KEY: 'aws secret',
+//   bucket: 'bucket name',
+//   sites:[
+//     name:'Garage', // the title for the site
+//     folder: 'images',  // the S3 bucket folder the images for this view are in
+//     refresh: 5  // how often to refresh this site
+//   ]
+// }
 
 
+// IAM: POLICY TEMPLATE
+//
+// 1. Create an IAM group with this policy
+// 2. Create a user, add to only this group
+// 3. User that users keys
+// {
+//     "Version": "2012-10-17",
+//     "Statement": [
+//         {
+//             "Effect": "Allow",
+//             "Action": [
+//                 "s3:Get*",
+//                 "s3:List*"
+//             ],
+//             "Resource": "arn:aws:s3:::BUCKET_NAME/*"
+//         }
+//     ]
+// }
 
+
+$.ajax({
+    url:'config.json',
+    type: 'get',
+    dataType:'json',
+    success: function(data) {
+
+      init(data);
+    },
+    error: function(err){
+
+      $(document.body).html("<H1>Couldn't find config.json in root. See README.md</H1><pre>" + err.statusText + "</pre>")
+
+    }
+  }, 'json');
 </script>
 
 </html>
