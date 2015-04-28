@@ -51,3 +51,22 @@ To configure the S3 account, you'll want to set it as a public static website so
 7. Go back to the group, choose users, and add the newly created user.
 
 You can now use the copied keys for public, readonly access.  These keys will be in the HTML file, but they don't offer any more abilities than the static website configuration already offers.
+
+## Setting up
+
+### Setting up the Raspberry Pi
+
+1. Install fswebcam (usually `sudo apt-get install fswebcam`)
+2. Clone this repo
+3. `cd rpi`
+4. `npm install`
+5. `npm install forever -g`
+6. `sudo forever start app.js -b BUCKET_NAME -c 'AWS_ACCESS_KEY|AWS_SECRET_ACCESS_KEY'` (that's the format, not an OR!)
+
+### Setting up the web page
+
+1.  Open index.html and add your IAM keys (public read only!), your bucket name (should match above), and optionally the folder and refresh to the `sites` collection. 
+2. Drop web/index.html into the root of the bucket
+3. Profit!  (okay, not really.)
+
+
