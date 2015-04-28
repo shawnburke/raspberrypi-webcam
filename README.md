@@ -3,7 +3,7 @@ Take a Raspberry Pi, and old USB webcam, and some node.js and create a webcam se
 
 # What you need
 
-1. A Raspberry Pi with node.js installed.  Follow [these instructions] to get Node.js installed properly on your RPi.  The RPi needs a network connection.
+1. A Raspberry Pi with node.js installed.  Follow [these instructions](https://learn.adafruit.com/node-embedded-development/installing-node-dot-js) to get Node.js installed properly on your RPi.  The RPi needs a network connection.
 2. A USB webcamera.  I found an old unused one in a box.
 3. An AWS account
 
@@ -11,12 +11,12 @@ Take a Raspberry Pi, and old USB webcam, and some node.js and create a webcam se
 
 The plan is pretty simple!  We'll write a Node app on the RPi to grab picture frames periodically from the camera, then we'll upload them to S3.
 
-On S3 we'll have a bucket configured as a [http://docs.aws.amazon.com/AmazonS3/latest/dev/WebsiteHosting.html](static website) so we can hit it with a web browser.  We'll store the images in this bucket, along with a simple web page that contains client-side JS for accessing the files.  
+On S3 we'll have a bucket configured as a [static website](http://docs.aws.amazon.com/AmazonS3/latest/dev/WebsiteHosting.html) so we can hit it with a web browser.  We'll store the images in this bucket, along with a simple web page that contains client-side JS for accessing the files.  
 
 
 ## Configuring S3
 
-To configure the S3 account, you'll want to set it as a public static website so web browsers (and AJAX calls) can access the files.  However, this does not allow listing the files.  Even though S3 will return the list of files from `listBucket`, I was unable to find a way to get the S3 SDK to make calls without credentials, or to just use the XML parser so I can call with AJAX and then parse the result to JSON (this is very doable).  So rather than fighting that battle, the next easiest thing is to just create an IAM user with the ability to read the files in the bucket.
+To configure the S3 account, you'll want to set it as a public static website so web browsers (and AJAX calls) can access the files.  However, this does not allow listing the files.  Even though S3 will return the list of files from `listBucket`, I was unable to find a way to get the S3 SDK to make calls without credentials, or to just use the XML parser so I can call with AJAX and then parse the result to JSON (the latter is very doable, I just didn't want to do the work to figure it out!).  So rather than fighting that battle, the next easiest thing is to just create an IAM user with the ability to read the files in the bucket.
 
 ### Configuring the bucket for static website access
 
@@ -52,7 +52,7 @@ We want a user that can access the directory for pulling a list of the files, an
 6. Create a user and copy the AccessKey/SecretKey
 7. Go back to the group, choose users, and add the newly created user.
 
-You can now use the copied keys for public, readonly access.  These keys will be in the HTML file, but they don't offer any more abilities than the static website configuration already offers.
+You can now use the copied keys for public, readonly access.  These keys will be in a JSON file that is Internet-accessible, but they don't offer any more abilities than the static website configuration already offers.
 
 ## Setting It All Up.
 
@@ -69,7 +69,9 @@ Here we'll set up the RPi using our read/write AWS keys so it can write files to
 
 ### Setting up the web page
 
-Create a json file called `config.json`, which will house the configuration for your project.  You will drop this file next do your Index.html.  These values are outside of the html file so we can check in the HTML wihout accidentally checking in keys, or for testing different configurations.
+To store our settings for the web page, create a json file called `config.json`.  This file will sit next to your Index.html.  
+
+These values are outside of the html file so we can check in the HTML wihout accidentally checking in keys, or for testing different configurations, and generally keeping things seperate.
 
 #### Create your configuration file
 
@@ -89,6 +91,8 @@ Here is a template for the file:
 			  }
 			]
 		}
+
+Note that `sites` is an array, as this is designed to view multiple cameras.  To do multiple, simply add multiple entries the the array that map to each Raspberry Pi you have running.  Make sure you pass the corresponding folder name to the Node running on the RPi (`-f imagesFolder2`).
 
 1. Upload `web/index.html` and `web/config.json' into the root of your bucket.  Be sure to do Set Details > Set Permissions > "Make Everything Public" when you are uploading.
 2. Navigate to the page with your web browser as the root of the bucket: `http://mybucket.s3-website-us-west-2.amazonaws.com`.
