@@ -145,6 +145,7 @@ function getFile(callback) {
 				// set our timer to call back through
 				//
 				_.delay(getFile, refresh);
+				cb(err);
 			});
 		}
 	], function(err) {
