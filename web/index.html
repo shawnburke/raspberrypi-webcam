@@ -89,22 +89,8 @@
 <script>
 
 (function init() {
-var publicReadKey = '[An aws key from a IAM account with readonly public access to the bucket]';
-var publicReadSecretKey = '[An aws secret key from a IAM account with readonly public access to the bucket]';
-
-var bucket = 'asfdsa'; // YOUR BUCKET NAME
 
 
-if (!bucket)
- {
-    $('.content-root').html("<H1>Bucket not defined.</H1>");
-    return;
- }
-
- if (publicReadKey.indexOf('[') !== -1 || publicReadSecretKey.indexOf('[') !== -1) {
-   $('.content-root').html("<H1>AWS creds not defined.</H1>");
-    return;  
- }
 // IAM: POLICY TEMPLATE
 //
 // 1. Create an IAM group with this policy
@@ -123,6 +109,26 @@ if (!bucket)
 //         }
 //     ]
 // }
+
+var publicReadKey = '[aws key]';
+var publicReadSecretKey = '[aws secret key]';
+
+
+
+var bucket = null; // YOUR BUCKET NAME
+
+
+if (!bucket)
+ {
+    $('.content-root').html("<H1>Bucket not defined.</H1>");
+    return;
+ }
+
+ if (publicReadKey.indexOf('[') !== -1 || publicReadSecretKey.indexOf('[') !== -1) {
+   $('.content-root').html("<H1>AWS creds not defined.</H1>");
+    return;  
+ }
+
 AWS.config.update({accessKeyId: publicReadKey, secretAccessKey: publicReadSecretKey});
 
 // define the cameras you want to monitor here.  Each camera will put its images into a separate 
@@ -130,8 +136,8 @@ AWS.config.update({accessKeyId: publicReadKey, secretAccessKey: publicReadSecret
 
 var sites = [
   { 
-    name: 'MAIN SITE NAME',
-    folder:'SITE FOLDER IN BUCKET',
+    name: 'Garage',
+    folder:'images',
     refresh: 5
   }
 ];
