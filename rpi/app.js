@@ -1,5 +1,5 @@
 
-
+var async = require('async');
 var Camelot = require('camelot');
 var util = require('util');
 var AWS = require('aws-sdk');
@@ -18,39 +18,45 @@ var args =
     { name: 'interval', type: Number, alias: "i", value:30, description: "The period of time to wait between captures (default 30)"},
     { name: 'device', type: String, alias: "d", value:'/dev/video0',  description: "The device to connect to (default '/dev/video0')"},
     { name: 'resolution', type: String, alias: "r", value:'800x600',  description: "Resolution for images (default '800x600')"},
-    { name: 'awscreds', type: String, alias: "c",  description: "AWS creds.  These can be set here as 'key|secret_key' or via env variables AWS_ACCESS_KEY, AWS_SECRET_ACCESS_KEY."},
+    { name: 'awscreds', type: String, alias: "c",  description: "AWS creds.  These can be set here as 'key|secret_key', 'profile_name', or via env variables AWS_ACCESS_KEY, AWS_SECRET_ACCESS_KEY."},
 ];
 
 var cli = cliArgs(args);
 var options = cli.parse(); 
 
-if (options.help || !options.bucket || true) {
+if (options.help || !options.bucket) {
 	var usage = cli.getUsage({
 		header:"Raspberry Pi Webcam Usage",
 		footer:"\r\n\r\n  See http://github.com/shawnburke/raspberrypi-webcam for more info."
 	});
 	console.log(usage);
-	console.log(JSON.stringify(options,null, 2))
 	return;
 }
 
+var credentials = null;
 var awsKey = process.env.AWS_ACCESS_KEY;
 var awsSecret = process.env.AWS_SECRET_ACCESS_KEY;
 
-if (options.awscreds) {
+if (options.awscreds && options.awscreds.length) {
 	var parts = options.awscreds.split('|');
-	if (parts.length != 2) {
-		console.error("Expected AWS creds as 'key|secret'");
-		return;
+	switch (parts.length) {
+		case 1:
+			credentials = new AWS.SharedIniFileCredentials({profile: options.awscreds});
+			break;
+		case 2:
+			awsKey = parts[0];
+        	awsSecret = parts[1];
+			break;
+		default:
+			console.error("Expected AWS creds as 'key|secret'");
+			return;
 	}
-	awsKey = parts[0];
-	awsSecret = parts[1];
 }
 
 // DON'T FORGET TO SET AWS_ACCESS_KEY and AWS_SECRET_ACCESS_KEY
 
-if (!awsKey || !awsSecret) {
-	console.error("Please set AWS creds (env variables AWS_ACCESS_KEY/AWS_SECRET_ACCESS_KEY, or command line as -c 'key|secret_key')");
+if (!credentials && (!awsKey || !awsSecret)) {
+	console.error("Please set AWS creds (env variables AWS_ACCESS_KEY/AWS_SECRET_ACCESS_KEY, or command line as -c 'key|secret_key').  Remember that running as sudo will get a different environment.");
 	return;
 }
 
@@ -59,15 +65,22 @@ var camelot = new Camelot( {
   resolution: options.resolution
 });
 
+if (!credentials) {
+	AWS.config.update({accessKeyId: awsKey, secretAccessKey: awsSecret});
+}
+else {
 
+	AWS.config.credentials = credentials;
+}
 var s3 = new AWS.S3({Bucket:options.bucket});
 var bucketConfigured = false;
+
 
 // configure the bucket so images TTL.
 function configureBucket(callback) {
 
 
-	if (!bucketConfigured && config.ttl_days > 0) {
+	if (!bucketConfigured && options.ttl > 0) {
 
 		var bucketParams = {
 		  Bucket: options.bucket, 
@@ -90,7 +103,7 @@ function configureBucket(callback) {
 		  		console.error("Error configuring bucket lifecycle: " + err.message, err.stack); 
 		  }
 		  else {
-		  		console.log("Configured " + config.bucket + " to TTL images after " + config.ttl_days + " days.");
+		  		console.log("Configured " + options.bucket + " to TTL images after " + options.ttl + " days.");
 		  		bucketConfigured = true;
 
 		  }
@@ -106,7 +119,7 @@ var interval = options.interval * 1000;
 
 function getFile(callback) {
 
-	async.series([
+	async.waterfall([
 
 		configureBucket,
 		function getPicture(cb) {
@@ -150,7 +163,7 @@ function getFile(callback) {
 		}
 	], function(err) {
 		if (err) {
-			console.error("Error: " + err.message);
+			console.error("Error: " + (err.message||err));
 		}
 		callback && callback(err);
 	});
